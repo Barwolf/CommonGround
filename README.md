@@ -21,9 +21,9 @@ In a post-lockdown world dominated by digital isolation, many people struggle to
 TBD
 
 ## 👥 Team: Common Ground
-* **Ashley Yee** (ayyee) – API Integration & Database
-* **Jeremiah Lillion** (jlillion) – Frontend Design & Implementation
-* **Logan Mifflin** (lmifflin) – Backend & Data Collection
+* **Ashley Yee** – API Integration & Database
+* **Jeremiah Lillion** – Frontend Design & Implementation
+* **Logan Mifflin** – Backend & Data Collection
 
 ## 📅 Project Scope
 This project is being developed as a functional prototype. The current focus is on recommendation logic and core community features.
