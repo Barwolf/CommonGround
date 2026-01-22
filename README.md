@@ -1,6 +1,6 @@
 # Common Ground 🌿
 <p align="center">
-  <img src="assets/logo.png" alt="Common Ground Logo" width="200">
+  <img src="git_assets/logo.png" alt="Common Ground Logo" width="200">
 </p>
 
 **Common Ground** is a personal, context-aware activity recommendation system designed to bridge the gap between digital fatigue and physical connection. 
