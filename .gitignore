@@ -3,6 +3,13 @@
 # dependencies
 node_modules/
 
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+/ios
+/android
+
 # Expo
 .expo/
 dist/
