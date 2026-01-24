@@ -1,22 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import { useState, useEffect } from 'react';
 
+// Screens
 import Onboarding from './src/screens/Onboarding';
+import Dashboard from './src/screens/Dashboard';
+
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Onboarding />
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  const [user, setUser] = useState();
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  useEffect(() => {
+    // This "reflex" triggers whenever someone logs in or out
+    const subscriber = auth().onAuthStateChanged((user) => {
+      setUser(user); 
+    });
+    return subscriber; // Unsubscribe on unmount
+  }, []);
+
+  if (!user) return <Onboarding />;
+  return <Dashboard user={user} />;
+}
