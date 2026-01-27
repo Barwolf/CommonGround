@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { getAuth, signOut } from '@react-native-firebase/auth';
 
 // This will be native for iOS and Android
 // https://docs.expo.dev/versions/latest/sdk/slider/
@@ -54,6 +55,10 @@ export default function Onboarding({ navigation }) {
         onPress={() => alert('Preferences Saved!')}
       >
         <Text style={styles.buttonText}>Start Touching Grass</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => signOut(getAuth())}>
+        <Text>Sign Out & Try Again</Text>
       </TouchableOpacity>
     </View>
   );
