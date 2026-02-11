@@ -45,42 +45,30 @@ export default function Onboarding() {
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    setLoading(true); // Start a loading spinner so they know it's working
+    
     try {
-      // This triggers the standard browser Google login popup
+      // 1. Trigger the Google Login
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       console.log("✅ Signed in as:", user.displayName);
-      Alert.alert("Success!", `Logged in as ${user.displayName}`);
-    } catch (error) {
-      console.error("❌ Sign-in error:", error);
-      Alert.alert("Sign-in Failed", error.message);
-    }
-  };
 
-  // 3. New 'Submit' function using Web SDK
-  const handleCompleteOnboarding = async () => {
-    const user = auth.currentUser;
-
-    if (!user) {
-      Alert.alert("Error", "You must be logged in with Google first!");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Using standard Firebase JS SDK syntax
+      // 2. Immediately save the slider data using the new user's UID
       await setDoc(doc(db, "profiles", user.uid), {
+        name: user.displayName,
+        email: user.email,
         socialBattery,
         physicalEnergy,
         interests: selectedInterests,
         updatedAt: serverTimestamp(),
       });
+
+      console.log("🔥 Profile auto-saved to Firestore!");
+      Alert.alert("All set!", `Welcome ${user.displayName}, your profile is saved.`);
       
-      console.log("🔥 Profile Saved to Firestore!");
-      Alert.alert("Success!", "Your profile is set up.");
     } catch (error) {
-      console.error("❌ Firestore Error:", error);
-      Alert.alert("Save Failed", error.message);
+      console.error("❌ Process failed:", error);
+      Alert.alert("Error", "Something went wrong during sign-in or saving.");
     } finally {
       setLoading(false);
     }
@@ -178,26 +166,21 @@ export default function Onboarding() {
             </View>
           </View>
 
-{/* 1. Show Login if NOT logged in */}
+{/* Only show the button if they aren't logged in yet */}
 {!auth.currentUser ? (
   <TouchableOpacity 
-    style={[styles.primaryButton, { backgroundColor: '#4285F4' }]} 
-    onPress={handleGoogleSignIn}
-  >
-    <Text style={styles.primaryButtonText}>Sign in with Google</Text>
-  </TouchableOpacity>
-) : (
-  /* 2. Show Submit (Connect Calendar) if logged in */
-  <TouchableOpacity 
     style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
-    onPress={handleCompleteOnboarding}
+    onPress={handleGoogleSignIn}
     disabled={loading}
   >
-    <Calendar color="#FFF" size={20} />
     <Text style={styles.primaryButtonText}>
-      {loading ? "Saving..." : "Connect Calendar & Save"}
+      {loading ? "Saving Profile..." : "Sign in with Google"}
     </Text>
   </TouchableOpacity>
+) : (
+  <View style={styles.section}>
+    <Text style={styles.label}>✅ Profile Linked to {auth.currentUser.displayName}</Text>
+  </View>
 )}
 
           <TouchableOpacity>
