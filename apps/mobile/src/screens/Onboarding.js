@@ -1,95 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  ScrollView, 
+  SafeAreaView,
+  Dimensions,
+  Alert
+} from 'react-native';
 
-// 2026 MODULAR SDK
-import { getAuth, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
-import { getFirestore, doc, setDoc, addDoc, serverTimestamp, collection } from '@react-native-firebase/firestore';
+// 1. Web-compatible Slider and Lucide imports
+import Slider from '@react-native-community/slider';
+import { Leaf, Calendar } from 'lucide-react-native';
+
+// 2. Import your new web-configured Firebase
+import { auth, db } from '../../firebaseConfig'; 
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+
+const { width } = Dimensions.get('window');
 
 export default function Onboarding() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [socialBattery, setSocialBattery] = useState(50);
+  const [physicalEnergy, setPhysicalEnergy] = useState(50);
+  const [selectedInterests, setSelectedInterests] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-  const testConnection = async () => {
-    try {
-      const db = getFirestore();
-      await addDoc(collection(db, "profiles"), { time: new Date() });
-      console.log("🚀 CLOUD CONNECTION VERIFIED!");
-    } catch (e) {
-      console.log("❌ CLOUD FAILED:", e.message);
-    }
-  };
-  testConnection();
-}, []);
+  const interests = [
+    'Hiking', 'Board Games', 'Live Music', 'Yoga', 'Coffee Chats',
+    'Rock Climbing', 'Book Clubs', 'Cooking', 'Art Galleries',
+    'Running', 'Meditation', 'Dancing'
+  ];
 
-  const handleSignUp = async () => {
-    if (!email || !password) return Alert.alert("Error", "Enter email/pass");
+  const toggleInterest = (interest) => {
+    setSelectedInterests(prev =>
+      prev.includes(interest)
+        ? prev.filter(i => i !== interest)
+        : [...prev, interest]
+    );
+  };
+
+  // 3. New 'Submit' function using Web SDK
+  const handleCompleteOnboarding = async () => {
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert("Error", "You must be logged in with Google first!");
+      return;
+    }
 
     setLoading(true);
-    const auth = getAuth();
-    const db = getFirestore();
-
     try {
-      // 1. Create the User
-      console.log("Creating user...");
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-      console.log("✅ User Created! UID:", uid);
-
-      // 2. The Push with a Timeout
-      console.log("⏳ Attempting push to 'profiles'...");
-      
-      const pushPromise = setDoc(doc(db, "profiles", uid), {
-        email: email,
-        status: "Active",
-        lastUpdated: serverTimestamp(),
+      // Using standard Firebase JS SDK syntax
+      await setDoc(doc(db, "profiles", user.uid), {
+        socialBattery,
+        physicalEnergy,
+        interests: selectedInterests,
+        updatedAt: serverTimestamp(),
       });
-
-      // If the server doesn't respond in 5s, we catch it
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Server Timeout: Check your Internet/Rules")), 5000)
-      );
-
-      await Promise.race([pushPromise, timeoutPromise]);
-
-      console.log("🔥 SUCCESS: Document is in Firestore!");
-      Alert.alert("Success!", "Account created and data pushed.");
-
+      
+      console.log("🔥 Profile Saved to Firestore!");
+      Alert.alert("Success!", "Your profile is set up.");
     } catch (error) {
-      console.log("❌ ERROR:", error.code || "TIMEOUT", error.message);
-      Alert.alert("Fail", error.message);
+      console.error("❌ Firestore Error:", error);
+      Alert.alert("Save Failed", error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const getSocialLabel = (value) => {
+    if (value < 33) return 'Introverted/Solo';
+    if (value > 66) return 'Extroverted/Group';
+    return 'Flexible';
+  };
+
+  const getEnergyLabel = (value) => {
+    if (value < 33) return 'Low Impact';
+    if (value > 66) return 'High Intensity';
+    return 'Moderate';
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Common Ground Onboarding 🌿</Text>
-      <TextInput 
-        style={styles.input} placeholder="Email"
-        onChangeText={setEmail} autoCapitalize="none"
-      />
-      <TextInput 
-        style={styles.input} placeholder="Password"
-        onChangeText={setPassword} secureTextEntry
-      />
-      <TouchableOpacity 
-        style={[styles.button, loading && { opacity: 0.5 }]} 
-        onPress={handleSignUp} 
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Join Community</Text>}
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTitleRow}>
+            <Leaf color="#7A9B76" size={32} />
+            <Text style={styles.title}>Common Ground</Text>
+          </View>
+          <Text style={styles.subtitle}>Find your people, your way</Text>
+        </View>
+
+        {/* Card */}
+        <View style={styles.card}>
+          
+          {/* Social Battery */}
+          <View style={styles.section}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Social Battery</Text>
+              <View style={styles.badgeGreen}>
+                <Text style={styles.badgeTextGreen}>{getSocialLabel(socialBattery)}</Text>
+              </View>
+            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={100}
+              value={socialBattery}
+              onValueChange={v => setSocialBattery(Math.floor(v))}
+              minimumTrackTintColor="#7A9B76"
+              maximumTrackTintColor="#E8F0E7"
+              thumbTintColor="#7A9B76"
+            />
+          </View>
+
+          {/* Physical Energy */}
+          <View style={styles.section}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Physical Energy</Text>
+              <View style={styles.badgeBrown}>
+                <Text style={styles.badgeTextBrown}>{getEnergyLabel(physicalEnergy)}</Text>
+              </View>
+            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={100}
+              value={physicalEnergy}
+              onValueChange={v => setPhysicalEnergy(Math.floor(v))}
+              minimumTrackTintColor="#8B7355"
+              maximumTrackTintColor="#F0EBE4"
+              thumbTintColor="#8B7355"
+            />
+          </View>
+
+          {/* Interests */}
+          <View style={styles.section}>
+            <Text style={styles.label}>What sounds fun?</Text>
+            <View style={styles.tagGrid}>
+              {interests.map((interest) => (
+                <TouchableOpacity
+                  key={interest}
+                  onPress={() => toggleInterest(interest)}
+                  style={[
+                    styles.tag,
+                    selectedInterests.includes(interest) && styles.tagSelected
+                  ]}
+                >
+                  <Text style={[
+                    styles.tagText,
+                    selectedInterests.includes(interest) && styles.tagTextSelected
+                  ]}>
+                    {interest}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity 
+            style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
+            onPress={handleCompleteOnboarding}
+            disabled={loading}
+          >
+            <Calendar color="#FFF" size={20} />
+            <Text style={styles.primaryButtonText}>
+              {loading ? "Saving..." : "Connect Calendar"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity>
+            <Text style={styles.skipText}>Skip for now</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 30, justifyContent: 'center', backgroundColor: '#F9F7F2' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#2D5A27' },
-  input: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#DDD' },
-  button: { backgroundColor: '#2D5A27', padding: 15, borderRadius: 10, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold' }
+  container: { flex: 1, backgroundColor: '#F5F3EE' },
+  scrollContent: { padding: 20, alignItems: 'center', paddingBottom: 40 },
+  header: { alignItems: 'center', marginBottom: 30, marginTop: 20 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#4A5D47' },
+  subtitle: { color: '#8B7355', fontSize: 14 },
+  card: { backgroundColor: '#FFF', borderRadius: 30, padding: 25, width: '100%', elevation: 3 },
+  section: { marginBottom: 30 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  label: { fontSize: 15, fontWeight: 'bold', color: '#4A5D47' },
+  badgeGreen: { backgroundColor: '#E8F0E7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeTextGreen: { color: '#7A9B76', fontSize: 11, fontWeight: 'bold' },
+  badgeBrown: { backgroundColor: '#F0EBE4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeTextBrown: { color: '#8B7355', fontSize: 11, fontWeight: 'bold' },
+  slider: { width: '100%', height: 40 },
+  tagGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
+  tag: { backgroundColor: '#F5F3EE', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 15, margin: 5, width: (width - 120) / 3, alignItems: 'center' },
+  tagSelected: { backgroundColor: '#7A9B76' },
+  tagText: { fontSize: 12, color: '#4A5D47' },
+  tagTextSelected: { color: '#FFF' },
+  primaryButton: { backgroundColor: '#4A5D47', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15, borderRadius: 20, gap: 10, marginBottom: 15 },
+  primaryButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  skipText: { textAlign: 'center', color: '#8B7355' }
 });

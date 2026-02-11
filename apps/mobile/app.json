@@ -29,18 +29,19 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-  "plugins": [
-    "@react-native-firebase/app",
-    "@react-native-firebase/auth",
-    [
-      "expo-build-properties",
-      {
-        "ios": {
-          "useFrameworks": "static",
-          "buildReactNativeFromSource": true
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "buildReactNativeFromSource": true
+          }
         }
-      }
+      ],
+      "@react-native-google-signin/google-signin"
     ]
-  ]
-}
+  }
 }

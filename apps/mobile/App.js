@@ -1,22 +1,31 @@
-import auth from '@react-native-firebase/auth';
-import { useState, useEffect } from 'react';
-
-// Screens
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+// IMPORTANT: Use the web SDK import for onAuthStateChanged
+import { onAuthStateChanged } from 'firebase/auth'; 
+import { auth } from './firebaseConfig'; 
 import Onboarding from './src/screens/Onboarding';
-import Dashboard from './src/screens/Dashboard';
-
 
 export default function App() {
-  const [user, setUser] = useState();
+  const [user, setUser] = useState(null);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    // This "reflex" triggers whenever someone logs in or out
-    const subscriber = auth().onAuthStateChanged((user) => {
-      setUser(user); 
+    // This listener is safe because it only runs after the component is ready
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      if (initializing) setInitializing(false);
     });
-    return subscriber; // Unsubscribe on unmount
+
+    return unsubscribe; // cleanup
   }, []);
 
-  if (!user) return <Onboarding />;
-  return <Dashboard user={user} />;
+  if (initializing) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#7A9B76" />
+      </View>
+    );
+  }
+
+  return <Onboarding />;
 }
