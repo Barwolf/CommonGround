@@ -16,7 +16,7 @@ import { Leaf, Calendar } from 'lucide-react-native';
 
 // 2. Import your new web-configured Firebase
 import { auth, db } from '../../firebaseConfig'; 
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // Add signInWithPopup and GoogleAuthProvider
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -53,6 +53,7 @@ export default function Onboarding() {
       // 1. Trigger the Google Login
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      const userRef = doc(db, "profiles", user.uid);
       console.log("✅ Signed in as:", user.displayName);
 
       // Update the aggregate counts for the selected interests
