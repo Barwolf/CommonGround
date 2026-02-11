@@ -16,14 +16,16 @@ import { Leaf, Calendar } from 'lucide-react-native';
 
 // 2. Import your new web-configured Firebase
 import { auth, db } from '../../firebaseConfig'; 
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // Add signInWithPopup and GoogleAuthProvider
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
+import { updateGlobalActivityCounts } from '../utils/updateAggregates';
+
 const { width } = Dimensions.get('window');
 
-export default function Onboarding() {
+export default function Onboarding({ onComplete }) {  
   const [socialBattery, setSocialBattery] = useState(50);
   const [physicalEnergy, setPhysicalEnergy] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState([]);
@@ -45,27 +47,65 @@ export default function Onboarding() {
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
-    setLoading(true); // Start a loading spinner so they know it's working
-    
+    setLoading(true);
+
     try {
-      // 1. Trigger the Google Login
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      const userRef = doc(db, "profiles", user.uid);
       console.log("✅ Signed in as:", user.displayName);
 
-      // 2. Immediately save the slider data using the new user's UID
-      await setDoc(doc(db, "profiles", user.uid), {
+      const userSnap = await getDoc(userRef);
+      
+      let oldInterests = [];
+      let oldSocial = 0;
+      let oldPhysical = 0;
+      let isNewUser = true;
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        oldInterests = data.interests || [];
+        oldSocial = data.socialBattery || 0; 
+        oldPhysical = data.physicalEnergy || 0;
+        isNewUser = false;
+      }
+
+      const updatesForStats = {};
+      selectedInterests.forEach(interest => {
+        if (!oldInterests.includes(interest)) updatesForStats[interest] = 1;
+      });
+      oldInterests.forEach(interest => {
+        if (!selectedInterests.includes(interest)) updatesForStats[interest] = -1;
+      });
+
+      const socialDelta = socialBattery - oldSocial;
+      const physicalDelta = physicalEnergy - oldPhysical;
+      
+      const userCountDelta = isNewUser ? 1 : 0;
+
+      await updateGlobalActivityCounts({
+        activityChanges: updatesForStats,
+        socialDelta,
+        physicalDelta,
+        userCountDelta
+      });
+
+      const newProfileData = {
         name: user.displayName,
         email: user.email,
         socialBattery,
         physicalEnergy,
         interests: selectedInterests,
         updatedAt: serverTimestamp(),
-      });
+      };
 
-      console.log("🔥 Profile auto-saved to Firestore!");
-      Alert.alert("All set!", `Welcome ${user.displayName}, your profile is saved.`);
-      
+      await setDoc(userRef, newProfileData, { merge: true });
+
+      console.log("🔥 Profile saved.");
+
+      if (onComplete) {
+        onComplete(newProfileData);
+      }
     } catch (error) {
       console.error("❌ Process failed:", error);
       Alert.alert("Error", "Something went wrong during sign-in or saving.");
