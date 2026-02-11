@@ -18,6 +18,9 @@ import { Leaf, Calendar } from 'lucide-react-native';
 import { auth, db } from '../../firebaseConfig'; 
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+// Add signInWithPopup and GoogleAuthProvider
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+
 const { width } = Dimensions.get('window');
 
 export default function Onboarding() {
@@ -38,6 +41,20 @@ export default function Onboarding() {
         ? prev.filter(i => i !== interest)
         : [...prev, interest]
     );
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      // This triggers the standard browser Google login popup
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("✅ Signed in as:", user.displayName);
+      Alert.alert("Success!", `Logged in as ${user.displayName}`);
+    } catch (error) {
+      console.error("❌ Sign-in error:", error);
+      Alert.alert("Sign-in Failed", error.message);
+    }
   };
 
   // 3. New 'Submit' function using Web SDK
@@ -161,17 +178,27 @@ export default function Onboarding() {
             </View>
           </View>
 
-          {/* Submit Button */}
-          <TouchableOpacity 
-            style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
-            onPress={handleCompleteOnboarding}
-            disabled={loading}
-          >
-            <Calendar color="#FFF" size={20} />
-            <Text style={styles.primaryButtonText}>
-              {loading ? "Saving..." : "Connect Calendar"}
-            </Text>
-          </TouchableOpacity>
+{/* 1. Show Login if NOT logged in */}
+{!auth.currentUser ? (
+  <TouchableOpacity 
+    style={[styles.primaryButton, { backgroundColor: '#4285F4' }]} 
+    onPress={handleGoogleSignIn}
+  >
+    <Text style={styles.primaryButtonText}>Sign in with Google</Text>
+  </TouchableOpacity>
+) : (
+  /* 2. Show Submit (Connect Calendar) if logged in */
+  <TouchableOpacity 
+    style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
+    onPress={handleCompleteOnboarding}
+    disabled={loading}
+  >
+    <Calendar color="#FFF" size={20} />
+    <Text style={styles.primaryButtonText}>
+      {loading ? "Saving..." : "Connect Calendar & Save"}
+    </Text>
+  </TouchableOpacity>
+)}
 
           <TouchableOpacity>
             <Text style={styles.skipText}>Skip for now</Text>
