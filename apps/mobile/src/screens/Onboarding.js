@@ -21,6 +21,8 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 // Add signInWithPopup and GoogleAuthProvider
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
+import { updateGlobalActivityCounts } from '../utils/updateAggregates';
+
 const { width } = Dimensions.get('window');
 
 export default function Onboarding() {
@@ -53,7 +55,36 @@ export default function Onboarding() {
       const user = result.user;
       console.log("✅ Signed in as:", user.displayName);
 
-      // 2. Immediately save the slider data using the new user's UID
+      // Update the aggregate counts for the selected interests
+      const userSnap = await getDoc(userRef);
+      let oldInterests = [];
+      
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        oldInterests = data.interests || [];
+      }
+
+      const updatesForStats = {};
+
+      // A. Find items to INCREMENT (+1)
+      selectedInterests.forEach(interest => {
+        if (!oldInterests.includes(interest)) {
+          updatesForStats[interest] = 1;
+        }
+      });
+
+      // B. Find items to DECREMENT (-1)
+      oldInterests.forEach(interest => {
+        if (!selectedInterests.includes(interest)) {
+          updatesForStats[interest] = -1;
+        }
+      });
+
+      // Update Global Stats (only if there are actual changes)
+      if (Object.keys(updatesForStats).length > 0) {
+        await updateGlobalActivityCounts(updatesForStats);
+      }
+
       await setDoc(doc(db, "profiles", user.uid), {
         name: user.displayName,
         email: user.email,
@@ -167,7 +198,7 @@ export default function Onboarding() {
           </View>
 
 {/* Only show the button if they aren't logged in yet */}
-{!auth.currentUser ? (
+{ !auth.currentUser ? (
   <TouchableOpacity 
     style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
     onPress={handleGoogleSignIn}
