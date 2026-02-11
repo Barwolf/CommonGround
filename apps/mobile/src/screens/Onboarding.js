@@ -25,7 +25,7 @@ import { updateGlobalActivityCounts } from '../utils/updateAggregates';
 
 const { width } = Dimensions.get('window');
 
-export default function Onboarding() {
+export default function Onboarding({ onComplete }) {  
   const [socialBattery, setSocialBattery] = useState(50);
   const [physicalEnergy, setPhysicalEnergy] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState([]);
@@ -47,57 +47,65 @@ export default function Onboarding() {
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
-    setLoading(true); // Start a loading spinner so they know it's working
-    
+    setLoading(true);
+
     try {
-      // 1. Trigger the Google Login
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const userRef = doc(db, "profiles", user.uid);
       console.log("✅ Signed in as:", user.displayName);
 
-      // Update the aggregate counts for the selected interests
       const userSnap = await getDoc(userRef);
-      let oldInterests = [];
       
+      let oldInterests = [];
+      let oldSocial = 0;
+      let oldPhysical = 0;
+      let isNewUser = true;
+
       if (userSnap.exists()) {
         const data = userSnap.data();
         oldInterests = data.interests || [];
+        oldSocial = data.socialBattery || 0; 
+        oldPhysical = data.physicalEnergy || 0;
+        isNewUser = false;
       }
 
       const updatesForStats = {};
-
-      // A. Find items to INCREMENT (+1)
       selectedInterests.forEach(interest => {
-        if (!oldInterests.includes(interest)) {
-          updatesForStats[interest] = 1;
-        }
+        if (!oldInterests.includes(interest)) updatesForStats[interest] = 1;
       });
-
-      // B. Find items to DECREMENT (-1)
       oldInterests.forEach(interest => {
-        if (!selectedInterests.includes(interest)) {
-          updatesForStats[interest] = -1;
-        }
+        if (!selectedInterests.includes(interest)) updatesForStats[interest] = -1;
       });
 
-      // Update Global Stats (only if there are actual changes)
-      if (Object.keys(updatesForStats).length > 0) {
-        await updateGlobalActivityCounts(updatesForStats);
-      }
+      const socialDelta = socialBattery - oldSocial;
+      const physicalDelta = physicalEnergy - oldPhysical;
+      
+      const userCountDelta = isNewUser ? 1 : 0;
 
-      await setDoc(doc(db, "profiles", user.uid), {
+      await updateGlobalActivityCounts({
+        activityChanges: updatesForStats,
+        socialDelta,
+        physicalDelta,
+        userCountDelta
+      });
+
+      const newProfileData = {
         name: user.displayName,
         email: user.email,
         socialBattery,
         physicalEnergy,
         interests: selectedInterests,
         updatedAt: serverTimestamp(),
-      });
+      };
 
-      console.log("🔥 Profile auto-saved to Firestore!");
-      Alert.alert("All set!", `Welcome ${user.displayName}, your profile is saved.`);
-      
+      await setDoc(userRef, newProfileData, { merge: true });
+
+      console.log("🔥 Profile saved.");
+
+      if (onComplete) {
+        onComplete(newProfileData);
+      }
     } catch (error) {
       console.error("❌ Process failed:", error);
       Alert.alert("Error", "Something went wrong during sign-in or saving.");
@@ -199,7 +207,7 @@ export default function Onboarding() {
           </View>
 
 {/* Only show the button if they aren't logged in yet */}
-{ !auth.currentUser ? (
+{!auth.currentUser ? (
   <TouchableOpacity 
     style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
     onPress={handleGoogleSignIn}
