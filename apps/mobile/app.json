@@ -12,36 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "bundleIdentifier": "com.commonground.commonground",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "supportsTablet": true
-    },
-    "android": {
-      "package": "com.commonground.commonground",
-      "googleServicesFile": "./google-services.json",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
-    },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
-    "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static",
-            "buildReactNativeFromSource": true
-          }
-        }
-      ],
-      "@react-native-google-signin/google-signin"
-    ]
+    "platforms": ["web"]
   }
 }
