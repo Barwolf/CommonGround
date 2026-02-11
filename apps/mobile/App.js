@@ -1,31 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-// IMPORTANT: Use the web SDK import for onAuthStateChanged
-import { onAuthStateChanged } from 'firebase/auth'; 
-import { auth } from './firebaseConfig'; 
+import { auth, db } from './firebaseConfig';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import Onboarding from './src/screens/Onboarding';
+import Dashboard from './src/screens/Dashboard'; // Save your new code here!
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [initializing, setInitializing] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This listener is safe because it only runs after the component is ready
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      setUser(authUser);
-      if (initializing) setInitializing(false);
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        // 1. Fetch the profile we just auto-saved
+        const docRef = doc(db, "profiles", authUser.uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setProfile(docSnap.data());
+        }
+        setUser(authUser);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+      setLoading(false);
     });
 
-    return unsubscribe; // cleanup
+    return unsubscribe;
   }, []);
 
-  if (initializing) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#7A9B76" />
-      </View>
-    );
-  }
+  if (loading) return null; // Or a splash screen
 
-  return <Onboarding />;
+  // 2. Logic: If no user OR no profile yet, show Onboarding
+  // If they have a profile, show the Dashboard
+  return user && profile ? <Dashboard profile={profile} /> : <Onboarding />;
 }
