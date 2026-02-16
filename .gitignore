@@ -10,6 +10,13 @@ GoogleService-Info.plist
 /ios
 /android
 
+/data_acquisition/Include
+/data_acquisition/Lib
+/data_acquisition/Scripts
+/data_acquisition/.env
+/data_acquisition/pyvenv.cfg
+/data_acquisition/output_logs.txt
+
 # Expo
 .expo/
 dist/
