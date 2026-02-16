@@ -27,3 +27,23 @@ TBD
 
 ## 📅 Project Scope
 This project is being developed as a functional prototype. The current focus is on recommendation logic and core community features.
+
+
+## Deploy on Firebase Hosting
+Ensure you are in the mobile folder.
+
+```npm install -g firebase-tools```
+
+```firebase login```
+
+```firebase init hosting```
+
+Project: existing
+Public dir: dist
+Single-page app: y
+Auto builds and deploys with Github: n
+File exists: n
+
+```npx expo export -p web```
+
+```firebase deploy --only hosting```

@@ -6,6 +6,10 @@ node_modules/
 # Firebase
 google-services.json
 GoogleService-Info.plist
+.firebase/
+firebaseConfig.js
+
+package-lock.json
 
 /ios
 /android
