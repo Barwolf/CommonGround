@@ -39,11 +39,21 @@ Ensure you are in the mobile folder.
 ```firebase init hosting```
 
 Project: existing
+
 Public dir: dist
+
 Single-page app: y
+
 Auto builds and deploys with Github: n
+
 File exists: n
 
 ```npx expo export -p web```
 
 ```firebase deploy --only hosting```
+
+
+## Deploy Functions
+In apps/backend
+
+```https://commonground-485204.web.app/```
