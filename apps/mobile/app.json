@@ -16,6 +16,11 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "platforms": ["web"]
+    "platforms": [
+      "web"
+    ],
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

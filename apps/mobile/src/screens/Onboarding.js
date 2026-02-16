@@ -6,24 +6,15 @@ import {
   TouchableOpacity, 
   ScrollView, 
   SafeAreaView,
-  Dimensions,
+  ActivityIndicator,
   Alert
 } from 'react-native';
 
-// 1. Web-compatible Slider and Lucide imports
 import Slider from '@react-native-community/slider';
-import { Leaf, Calendar } from 'lucide-react-native';
-
-// 2. Import your new web-configured Firebase
+import { Leaf, CheckCircle2, LogOut } from 'lucide-react-native';
 import { auth, db } from '../../firebaseConfig'; 
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-
-// Add signInWithPopup and GoogleAuthProvider
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-
-import { updateGlobalActivityCounts } from '../utils/updateAggregates';
-
-const { width } = Dimensions.get('window');
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 export default function Onboarding({ onComplete }) {  
   const [socialBattery, setSocialBattery] = useState(50);
@@ -39,117 +30,63 @@ export default function Onboarding({ onComplete }) {
 
   const toggleInterest = (interest) => {
     setSelectedInterests(prev =>
-      prev.includes(interest)
-        ? prev.filter(i => i !== interest)
-        : [...prev, interest]
+      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
     );
   };
 
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
+  // 1. The Core Save Function
+  const handleSaveAndContinue = async () => {
+    // Safety check: ensure we have a user
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You aren't logged in!");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const userRef = doc(db, "profiles", user.uid);
-      console.log("✅ Signed in as:", user.displayName);
-
-      const userSnap = await getDoc(userRef);
+      const user = auth.currentUser;
       
-      let oldInterests = [];
-      let oldSocial = 0;
-      let oldPhysical = 0;
-      let isNewUser = true;
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        oldInterests = data.interests || [];
-        oldSocial = data.socialBattery || 0; 
-        oldPhysical = data.physicalEnergy || 0;
-        isNewUser = false;
-      }
-
-      const updatesForStats = {};
-      selectedInterests.forEach(interest => {
-        if (!oldInterests.includes(interest)) updatesForStats[interest] = 1;
-      });
-      oldInterests.forEach(interest => {
-        if (!selectedInterests.includes(interest)) updatesForStats[interest] = -1;
-      });
-
-      const socialDelta = socialBattery - oldSocial;
-      const physicalDelta = physicalEnergy - oldPhysical;
-      
-      const userCountDelta = isNewUser ? 1 : 0;
-
-      await updateGlobalActivityCounts({
-        activityChanges: updatesForStats,
-        socialDelta,
-        physicalDelta,
-        userCountDelta
-      });
-
-      const newProfileData = {
+      // Save the profile using the ALREADY EXISTING user UID
+      await setDoc(doc(db, "profiles", user.uid), {
         name: user.displayName,
         email: user.email,
         socialBattery,
         physicalEnergy,
         interests: selectedInterests,
         updatedAt: serverTimestamp(),
-      };
+      }, { merge: true });
 
-      await setDoc(userRef, newProfileData, { merge: true });
+      console.log("🔥 Profile Saved successfully.");
 
-      console.log("🔥 Profile saved.");
-
+      // 2. IMPORTANT: Signal App.js to refresh and move to Dashboard
       if (onComplete) {
-        onComplete(newProfileData);
+        onComplete();
       }
     } catch (error) {
-      console.error("❌ Process failed:", error);
-      Alert.alert("Error", "Something went wrong during sign-in or saving.");
+      console.error("❌ Save failed:", error);
+      Alert.alert("Error", "Could not save profile. Check your internet or Firestore rules.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const getSocialLabel = (value) => {
-    if (value < 33) return 'Introverted/Solo';
-    if (value > 66) return 'Extroverted/Group';
-    return 'Flexible';
-  };
-
-  const getEnergyLabel = (value) => {
-    if (value < 33) return 'Low Impact';
-    if (value > 66) return 'High Intensity';
-    return 'Moderate';
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <Leaf color="#7A9B76" size={32} />
             <Text style={styles.title}>Common Ground</Text>
           </View>
-          <Text style={styles.subtitle}>Find your people, your way</Text>
+          <Text style={styles.subtitle}>Welcome, {auth.currentUser?.displayName || 'Friend'}!</Text>
         </View>
 
-        {/* Card */}
         <View style={styles.card}>
           
-          {/* Social Battery */}
+          {/* Sliders */}
           <View style={styles.section}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Social Battery</Text>
-              <View style={styles.badgeGreen}>
-                <Text style={styles.badgeTextGreen}>{getSocialLabel(socialBattery)}</Text>
-              </View>
-            </View>
+            <Text style={styles.label}>Social Battery: {socialBattery}%</Text>
             <Slider
               style={styles.slider}
               minimumValue={0}
@@ -157,19 +94,12 @@ export default function Onboarding({ onComplete }) {
               value={socialBattery}
               onValueChange={v => setSocialBattery(Math.floor(v))}
               minimumTrackTintColor="#7A9B76"
-              maximumTrackTintColor="#E8F0E7"
               thumbTintColor="#7A9B76"
             />
           </View>
 
-          {/* Physical Energy */}
           <View style={styles.section}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Physical Energy</Text>
-              <View style={styles.badgeBrown}>
-                <Text style={styles.badgeTextBrown}>{getEnergyLabel(physicalEnergy)}</Text>
-              </View>
-            </View>
+            <Text style={styles.label}>Physical Energy: {physicalEnergy}%</Text>
             <Slider
               style={styles.slider}
               minimumValue={0}
@@ -177,28 +107,21 @@ export default function Onboarding({ onComplete }) {
               value={physicalEnergy}
               onValueChange={v => setPhysicalEnergy(Math.floor(v))}
               minimumTrackTintColor="#8B7355"
-              maximumTrackTintColor="#F0EBE4"
               thumbTintColor="#8B7355"
             />
           </View>
 
           {/* Interests */}
           <View style={styles.section}>
-            <Text style={styles.label}>What sounds fun?</Text>
+            <Text style={styles.label}>What are you into?</Text>
             <View style={styles.tagGrid}>
               {interests.map((interest) => (
                 <TouchableOpacity
                   key={interest}
                   onPress={() => toggleInterest(interest)}
-                  style={[
-                    styles.tag,
-                    selectedInterests.includes(interest) && styles.tagSelected
-                  ]}
+                  style={[styles.tag, selectedInterests.includes(interest) && styles.tagSelected]}
                 >
-                  <Text style={[
-                    styles.tagText,
-                    selectedInterests.includes(interest) && styles.tagTextSelected
-                  ]}>
+                  <Text style={[styles.tagText, selectedInterests.includes(interest) && styles.tagTextSelected]}>
                     {interest}
                   </Text>
                 </TouchableOpacity>
@@ -206,26 +129,27 @@ export default function Onboarding({ onComplete }) {
             </View>
           </View>
 
-{/* Only show the button if they aren't logged in yet */}
-{!auth.currentUser ? (
-  <TouchableOpacity 
-    style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
-    onPress={handleGoogleSignIn}
-    disabled={loading}
-  >
-    <Text style={styles.primaryButtonText}>
-      {loading ? "Saving Profile..." : "Sign in with Google"}
-    </Text>
-  </TouchableOpacity>
-) : (
-  <View style={styles.section}>
-    <Text style={styles.label}>✅ Profile Linked to {auth.currentUser.displayName}</Text>
-  </View>
-)}
-
-          <TouchableOpacity>
-            <Text style={styles.skipText}>Skip for now</Text>
+          {/* Action Button */}
+          <TouchableOpacity 
+            style={[styles.continueButton, loading && { opacity: 0.7 }]} 
+            onPress={handleSaveAndContinue}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <>
+                <CheckCircle2 color="#FFF" size={20} />
+                <Text style={styles.primaryButtonText}>Finish & Continue</Text>
+              </>
+            )}
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.signOutButton} onPress={() => signOut(auth)}>
+            <LogOut color="#8B7355" size={16} />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -237,23 +161,19 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20, alignItems: 'center', paddingBottom: 40 },
   header: { alignItems: 'center', marginBottom: 30, marginTop: 20 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#4A5D47' },
-  subtitle: { color: '#8B7355', fontSize: 14 },
-  card: { backgroundColor: '#FFF', borderRadius: 30, padding: 25, width: '100%', elevation: 3 },
-  section: { marginBottom: 30 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  label: { fontSize: 15, fontWeight: 'bold', color: '#4A5D47' },
-  badgeGreen: { backgroundColor: '#E8F0E7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeTextGreen: { color: '#7A9B76', fontSize: 11, fontWeight: 'bold' },
-  badgeBrown: { backgroundColor: '#F0EBE4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeTextBrown: { color: '#8B7355', fontSize: 11, fontWeight: 'bold' },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#4A5D47' },
+  subtitle: { color: '#8B7355', fontSize: 16, marginTop: 5 },
+  card: { backgroundColor: '#FFF', borderRadius: 30, padding: 25, width: '100%', maxWidth: 500, elevation: 3 },
+  section: { marginBottom: 25 },
+  label: { fontSize: 16, fontWeight: 'bold', color: '#4A5D47', marginBottom: 10 },
   slider: { width: '100%', height: 40 },
-  tagGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
-  tag: { backgroundColor: '#F5F3EE', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 15, margin: 5, width: (width - 120) / 3, alignItems: 'center' },
+  tagGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
+  tag: { backgroundColor: '#F5F3EE', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, margin: 4 },
   tagSelected: { backgroundColor: '#7A9B76' },
-  tagText: { fontSize: 12, color: '#4A5D47' },
-  tagTextSelected: { color: '#FFF' },
-  primaryButton: { backgroundColor: '#4A5D47', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 15, borderRadius: 20, gap: 10, marginBottom: 15 },
+  tagText: { color: '#4A5D47', fontSize: 13 },
+  tagTextSelected: { color: '#FFF', fontWeight: 'bold' },
+  continueButton: { backgroundColor: '#4A5D47', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 20, gap: 10, marginTop: 10 },
   primaryButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  skipText: { textAlign: 'center', color: '#8B7355' }
+  signOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20, gap: 8 },
+  signOutText: { color: '#8B7355', fontSize: 14, fontWeight: '500', textDecorationLine: 'underline' },
 });
