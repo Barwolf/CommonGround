@@ -6,7 +6,6 @@ import {
   TouchableOpacity, 
   ScrollView, 
   SafeAreaView,
-  Dimensions,
   ActivityIndicator,
   Alert
 } from 'react-native';
@@ -14,13 +13,11 @@ import {
 import Slider from '@react-native-community/slider';
 import { Leaf, CheckCircle2, LogOut } from 'lucide-react-native';
 import { auth, db } from '../../firebaseConfig'; 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
-// Your aggregation utility
+// 1. Import your transaction utility
 import { updateGlobalActivityCounts } from '../utils/updateAggregates';
-
-const { width } = Dimensions.get('window');
 
 export default function Onboarding({ onComplete }) {  
   const [socialBattery, setSocialBattery] = useState(50);
@@ -41,73 +38,47 @@ export default function Onboarding({ onComplete }) {
   };
 
   const handleSaveAndContinue = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    if (!auth.currentUser) return;
 
     setLoading(true);
-
     try {
-      const userRef = doc(db, "profiles", user.uid);
+      const user = auth.currentUser;
       
-      // 1. Fetch existing data to calculate the "Delta"
-      const userSnap = await getDoc(userRef);
-      
-      let oldInterests = [];
-      let oldSocial = 0;
-      let oldPhysical = 0;
-      let isNewUser = true;
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        oldInterests = data.interests || [];
-        oldSocial = data.socialBattery || 0; 
-        oldPhysical = data.physicalEnergy || 0;
-        isNewUser = false;
-      }
-
-      // 2. Calculate changes for interests (+1 for new, -1 for removed)
-      const updatesForStats = {};
+      // 2. Prepare the aggregate data for a NEW user
+      const activityChanges = {};
       selectedInterests.forEach(interest => {
-        if (!oldInterests.includes(interest)) updatesForStats[interest] = 1;
-      });
-      oldInterests.forEach(interest => {
-        if (!selectedInterests.includes(interest)) updatesForStats[interest] = -1;
+        activityChanges[interest] = 1; 
       });
 
-      // 3. Calculate value differences for sliders
-      const socialDelta = socialBattery - oldSocial;
-      const physicalDelta = physicalEnergy - oldPhysical;
-      const userCountDelta = isNewUser ? 1 : 0;
-
-      // 4. Update Global Aggregates safely via your Transaction utility
+      // 3. Fire the Global Update (The Transaction)
+      // We send the current values as the 'delta' because they started at 0
       await updateGlobalActivityCounts({
-        activityChanges: updatesForStats,
-        socialDelta,
-        physicalDelta,
-        userCountDelta
+        activityChanges,
+        socialDelta: socialBattery,
+        physicalDelta: physicalEnergy,
+        userCountDelta: 1 
       });
 
-      // 5. Prepare the new profile data
-      const newProfileData = {
+      // 4. Save the User Profile to Firestore
+      await setDoc(doc(db, "profiles", user.uid), {
         name: user.displayName,
         email: user.email,
         socialBattery,
         physicalEnergy,
         interests: selectedInterests,
+        onboarded: true, // Marker for App.js routing
         updatedAt: serverTimestamp(),
-      };
+      }, { merge: true });
 
-      // 6. Save to Firestore and move to Dashboard
-      await setDoc(userRef, newProfileData, { merge: true });
+      console.log("🔥 Onboarding Complete.");
 
-      console.log("🔥 Profile and global stats synced.");
-
+      // 5. Trigger the screen swap in App.js
       if (onComplete) {
-        onComplete(newProfileData);
+        onComplete();
       }
     } catch (error) {
-      console.error("❌ Process failed:", error);
-      Alert.alert("Error", "Something went wrong during saving.");
+      console.error("❌ Onboarding failed:", error);
+      Alert.alert("Error", "Check your Firestore rules or internet connection.");
     } finally {
       setLoading(false);
     }
@@ -127,7 +98,6 @@ export default function Onboarding({ onComplete }) {
 
         <View style={styles.card}>
           
-          {/* Social Battery Section */}
           <View style={styles.section}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Social Battery</Text>
@@ -144,7 +114,6 @@ export default function Onboarding({ onComplete }) {
             />
           </View>
 
-          {/* Physical Energy Section */}
           <View style={styles.section}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Physical Energy</Text>
@@ -161,9 +130,8 @@ export default function Onboarding({ onComplete }) {
             />
           </View>
 
-          {/* Interests Grid */}
           <View style={styles.section}>
-            <Text style={styles.label}>Interests</Text>
+            <Text style={styles.label}>Pick your interests</Text>
             <View style={styles.tagGrid}>
               {interests.map((interest) => (
                 <TouchableOpacity
@@ -179,7 +147,6 @@ export default function Onboarding({ onComplete }) {
             </View>
           </View>
 
-          {/* Action Button */}
           <TouchableOpacity 
             style={[styles.continueButton, loading && { opacity: 0.7 }]} 
             onPress={handleSaveAndContinue}
@@ -188,15 +155,16 @@ export default function Onboarding({ onComplete }) {
             {loading ? <ActivityIndicator color="#FFF" /> : (
               <>
                 <CheckCircle2 color="#FFF" size={20} />
-                <Text style={styles.primaryButtonText}>Finish & Continue</Text>
+                <Text style={styles.primaryButtonText}>Continue to Dashboard</Text>
               </>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.signOutButton} onPress={() => signOut(auth)}>
             <LogOut color="#8B7355" size={16} />
-            <Text style={styles.signOutText}>Not you? Sign Out</Text>
+            <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </SafeAreaView>
