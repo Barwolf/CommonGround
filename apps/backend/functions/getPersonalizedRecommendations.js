@@ -11,7 +11,7 @@ exports.getPersonalizedRecommendations = onCall(async (request) => {
     const bounds = geofire.geohashQueryBounds(center, radiusM);
     const promises = [];
     for (const b of bounds) {
-        const q = db.collection('location')
+        const q = db.collection('locations')
             .orderBy('geohash')
             .startAt(b[0])
             .endAt(b[1]);
@@ -67,10 +67,12 @@ function checkIsOpen(hoursMap) {
     if (hoursMap[day].length === 0)
         return false
 
+    let is_in_bounds = true;
+
     hoursMap[day].forEach(hourMap => {
         if (hourMap["open"] > time || hourMap["close"] < time)
-            return false;
+            is_in_bounds = false;
     });
 
-    return true; 
+    return is_in_bounds; 
 }
