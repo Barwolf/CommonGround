@@ -20,6 +20,7 @@ package-lock.json
 /data_acquisition/.env
 /data_acquisition/pyvenv.cfg
 /data_acquisition/output_logs.txt
+/data_acquisition/commonground_key.json
 
 # Expo
 .expo/
