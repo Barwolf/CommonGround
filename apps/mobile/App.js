@@ -1,29 +1,29 @@
 import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { auth, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-// Your screen imports
+// Screens
 import AuthScreen from './src/screens/AuthScreen';
 import Onboarding from './src/screens/Onboarding';
 import Dashboard from './src/screens/Dashboard';
+import ActivityDetail from './src/screens/ActivityDetail'; 
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // This function fetches the profile and updates the state
-const fetchProfile = async (uid) => {
-    console.log("🔍 Checking Firestore for UID:", uid); // Add this
+  const fetchProfile = async (uid) => {
     const docRef = doc(db, "profiles", uid);
     const docSnap = await getDoc(docRef);
-    
     if (docSnap.exists()) {
-      console.log("✅ Profile found:", docSnap.data()); // Add this
       setProfile(docSnap.data());
     } else {
-      console.log("❌ No profile found in Firestore."); // Add this
       setProfile(null);
     }
   };
@@ -32,7 +32,7 @@ const fetchProfile = async (uid) => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        await fetchProfile(authUser.uid); // Check on load
+        await fetchProfile(authUser.uid);
       } else {
         setUser(null);
         setProfile(null);
@@ -44,15 +44,33 @@ const fetchProfile = async (uid) => {
 
   if (loading) return null;
 
-  // 1. If not logged in -> AuthScreen
-  if (!user) return <AuthScreen />;
+  // --- NAVIGATION FLOWS ---
 
-  // 2. If logged in but NO profile -> Onboarding
-  // We pass fetchProfile so that when 'Continue' is clicked, it re-runs the check
-  if (user && !profile) {
-    return <Onboarding onComplete={() => fetchProfile(user.uid)} />;
-  }
-
-  // 3. If logged in AND has profile -> Dashboard
-  return <Dashboard profile={profile} />;
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!user ? (
+          // 1. Auth Flow
+          <Stack.Screen name="Auth" component={AuthScreen} />
+        ) : !profile ? (
+          // 2. Onboarding Flow
+          <Stack.Screen name="Onboarding">
+            {(props) => <Onboarding {...props} onComplete={() => fetchProfile(user.uid)} />}
+          </Stack.Screen>
+        ) : (
+          // 3. Main App Flow
+          <>
+            <Stack.Screen name="Home">
+              {(props) => <Dashboard {...props} profile={profile} />}
+            </Stack.Screen>
+            <Stack.Screen 
+              name="Details" 
+              component={ActivityDetail} 
+              options={{ animation: 'slide_from_bottom' }} // Optional: cool transition
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
