@@ -3,7 +3,33 @@ const { getFirestore } = require("firebase-admin/firestore");
 const geofire = require("geofire-common");
 
 exports.getPersonalizedRecommendations = onCall(async (request) => {
-    const { lat, lng, userPrefSocial, userPrefPhys, radiusM = 10000 } = request.data;
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Unauthorized use of API.");
+    }
+
+    const uid = request.auth.uid;
+
+    let userProfile;
+
+    try {
+        const profileDoc = await db.collection("profiles").doc(uid).get();
+
+        if (!profileDoc.exists) {
+            throw new HttpsError("not-found", "User profile does not exist.");
+        }
+
+        userProfile = profileDoc.data();
+    
+
+    } catch (error) {
+        console.error("Firestore Error:", error);
+        throw new HttpsError("internal", "Failed to fetch user profile.");
+    }
+
+    const { lat, lng, radiusM = 10000 } = request.data;
+    const userPrefSocial = userProfile.socialBattery;
+    const userPrefPhys = userProfile.physicalEnergy;
+    const userTags = new Set(userProfile.interests);
     const db = getFirestore();
     const center = [lat, lng];
 
@@ -25,28 +51,38 @@ exports.getPersonalizedRecommendations = onCall(async (request) => {
     snapshots.forEach(snap => {
         snap.forEach(doc => {
             const data = doc.data();
+
+            // Is it open?
+            const openNow = checkIsOpen(data.open_hours);
+
+            if (!openNow) return;
             
             // Calculate actual distance from user
             const distanceInKm = geofire.distanceBetween([data.lat, data.lng], center);
             const distanceInM = distanceInKm * 1000;
 
-            if (distanceInM <= radiusM) {
-                // How far is the place (social/phys) from the user's preference?
-                const socialDiff = Math.abs(data.sociability - userPrefSocial);
-                const physDiff = Math.abs(data.physicality - userPrefPhys);
-                const vibeScore = Math.sqrt(Math.pow(socialDiff, 2) + Math.pow(physDiff, 2));
+            if (distanceInM > radiusM) return;
 
-                // Is it open?
-                const openNow = checkIsOpen(data.open_hours);
+            // How far is the place (social/phys) from the user's preference?
+            const socialDiff = Math.abs(data.sociability - userPrefSocial);
+            const physDiff = Math.abs(data.physicality - userPrefPhys);
+            let vibeScore = Math.sqrt(Math.pow(socialDiff, 2) + Math.pow(physDiff, 2));
 
-                if (openNow) {
-                    results.push({
-                        ...data,
-                        vibeScore, // Lower is better
-                        distanceInM
-                    });
-                }
+            let tag_count = 0;
+
+            for (const tag of data.tags) {
+                if (userTags.has(tag))
+                    tag_count++;
             }
+
+            if (tag_count > 0)
+                vibeScore /= 2.0 * tag_count
+
+            results.push({
+                ...data,
+                vibeScore, // Lower is better
+                distanceInM
+            });
         });
     });
 
