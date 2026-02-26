@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import geofire from "geofire-common";
 
-exports.getPersonalizedRecommendations = onCall(async (request) => {
+export const getPersonalizedRecommendations = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError("unauthenticated", "Unauthorized use of API.");
     }
