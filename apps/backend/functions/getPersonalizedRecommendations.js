@@ -9,7 +9,7 @@ exports.getPersonalizedRecommendations = onCall(async (request) => {
     }
 
     const uid = request.auth.uid;
-        const db = getFirestore();
+    const db = getFirestore();
 
     let userProfile;
 
