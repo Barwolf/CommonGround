@@ -1,7 +1,6 @@
-const { onCall } = require("firebase-functions/v2/https");
-const { getFirestore } = require("firebase-admin/firestore");
-const geofire = require("geofire-common");
-import { HttpsError } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import geofire from "geofire-common";
 
 exports.getPersonalizedRecommendations = onCall(async (request) => {
     if (!request.auth) {
