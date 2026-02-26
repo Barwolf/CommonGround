@@ -1,6 +1,7 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { getFirestore } = require("firebase-admin/firestore");
 const geofire = require("geofire-common");
+import { HttpsError } from "firebase-functions/v2/https";
 
 exports.getPersonalizedRecommendations = onCall(async (request) => {
     if (!request.auth) {
@@ -8,6 +9,7 @@ exports.getPersonalizedRecommendations = onCall(async (request) => {
     }
 
     const uid = request.auth.uid;
+        const db = getFirestore();
 
     let userProfile;
 
@@ -30,7 +32,6 @@ exports.getPersonalizedRecommendations = onCall(async (request) => {
     const userPrefSocial = userProfile.socialBattery;
     const userPrefPhys = userProfile.physicalEnergy;
     const userTags = new Set(userProfile.interests);
-    const db = getFirestore();
     const center = [lat, lng];
 
     // This tells firestore "Only look for strings starting with these characters"
