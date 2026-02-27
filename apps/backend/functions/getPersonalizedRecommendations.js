@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, VectorValue, FieldValue } from "firebase-admin/firestore";
 import geofire from "geofire-common";
 
 const db = getFirestore();
@@ -28,8 +28,8 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     }
 
     const { lat, lng, radiusM = 10000 } = request.data;
-    const userPrefSocial = userProfile.socialBattery;
-    const userPrefPhys = userProfile.physicalEnergy;
+    const prefVector = VectorValue.vector([userProfile.socialBattery, userProfile.physicalEnergy]);
+
     const userTags = new Set(userProfile.interests);
     const center = [lat, lng];
 
@@ -37,13 +37,18 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     const bounds = geofire.geohashQueryBounds(center, radiusM);
     const promises = [];
     for (const b of bounds) {
-        const q = db.collection('locations')
-            .orderBy('geohash')
-            .startAt(b[0])
-            .endAt(b[1])
-            .select('lat', 'lng', 'sociability', 'physicality', 'open_hours', 'name', 'tags')
-            .get();
-        promises.push(q.get());
+        const q = db.pipeline()
+            .collection('locations')
+            .where('geohash', '>=', b[0])
+            .where('geohash', '<=', b[1])
+            .findNearest({
+                field: 'vibe_vector',
+                vectorValue: prefVector,
+                distanceMeasure: 'euclidean',
+                limit: 40,
+                distanceResultField: 'vibeScore'
+            })
+        promises.push(q.execute());
     }
 
     // fetching data
@@ -58,7 +63,7 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     const time = now.getHours() * 100 + now.getMinutes();
 
     snapshots.forEach(snap => {
-        snap.forEach(doc => {
+        snap.documents.forEach(doc => {
             const data = doc.data();
 
             // Is it open?
@@ -71,19 +76,8 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
             if (distanceInM > radiusM) return;
 
             // How far is the place (social/phys) from the user's preference?
-            const socialDiff = Math.abs(data.sociability - userPrefSocial);
-            const physDiff = Math.abs(data.physicality - userPrefPhys);
-            let vibeScore = Math.sqrt(Math.pow(socialDiff, 2) + Math.pow(physDiff, 2));
-
-            let tag_count = 0;
-
-            for (const tag of data.tags) {
-                if (userTags.has(tag))
-                    tag_count++;
-            }
-
-            if (tag_count > 0)
-                vibeScore /= 2.0 * tag_count
+            const matches = data.tags.filter(tag => userTags.has(tag)).length;
+            const vibeScore = data.vibeScore / (1 + matches)
 
             results.push({
                 ...data,
@@ -103,10 +97,13 @@ function isPlaceOpen(hoursMap, day, time) {
     if (hoursMap[day].length === 0)
         return false
 
-    for (const hourMap of hoursMaps[day]) {
-        if (hourMap["open"] > time || hourMap["close"] < time)
-            return false
-    }
+    return hoursMap[day].some(window => {
+            const { open, close } = window;
 
-    return true;
+            if (close >= open) {
+                return open <= time && time <= close;
+            }
+
+            return open <= time || time <= close;
+        });
 }

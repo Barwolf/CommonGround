@@ -58,3 +58,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# extra stuff
+
+migrating_data_pos.js
+serviceAccount.json
