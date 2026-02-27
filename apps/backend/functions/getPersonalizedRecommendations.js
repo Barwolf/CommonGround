@@ -2,14 +2,14 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import geofire from "geofire-common";
 
-export const getPersonalizedRecommendations = onCall(async (request) => {
+const db = getFirestore();
+
+export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (request) => {
     if (!request.auth) {
         throw new HttpsError("unauthenticated", "Unauthorized use of API.");
     }
 
     const uid = request.auth.uid;
-    const db = getFirestore();
-
     let userProfile;
 
     try {
@@ -40,7 +40,9 @@ export const getPersonalizedRecommendations = onCall(async (request) => {
         const q = db.collection('locations')
             .orderBy('geohash')
             .startAt(b[0])
-            .endAt(b[1]);
+            .endAt(b[1])
+            .select('lat', 'lng', 'sociability', 'physicality', 'open_hours', 'name', 'tags')
+            .get();
         promises.push(q.get());
     }
 
@@ -48,14 +50,19 @@ export const getPersonalizedRecommendations = onCall(async (request) => {
     const snapshots = await Promise.all(promises);
     const results = [];
 
+    // Getting current time of query
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const now = new Date();
+
+    const day = days[now.getDay()];
+    const time = now.getHours() * 100 + now.getMinutes();
+
     snapshots.forEach(snap => {
         snap.forEach(doc => {
             const data = doc.data();
 
             // Is it open?
-            const openNow = checkIsOpen(data.open_hours);
-
-            if (!openNow) return;
+            if (!isPlaceOpen(data.open_hours, day, time)) return;
             
             // Calculate actual distance from user
             const distanceInKm = geofire.distanceBetween([data.lat, data.lng], center);
@@ -90,25 +97,16 @@ export const getPersonalizedRecommendations = onCall(async (request) => {
     return results.sort((a, b) => a.vibeScore - b.vibeScore).slice(0, 20);
 });
 
-// Helper to parse your JSON's "Monday: 11:00 AM – 10:00 PM" format
-function checkIsOpen(hoursMap) {
+function isPlaceOpen(hoursMap, day, time) {
     if (!hoursMap || Object.keys(hoursMap).length === 0) return true; // Default to true if unknown
-
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const now = new Date();
-    // Adjust for your local timezone if necessary
-    const day = days[now.getDay()];
-    const time = now.getHours() * 100 + now.getMinutes();
 
     if (hoursMap[day].length === 0)
         return false
 
-    let is_in_bounds = true;
-
-    hoursMap[day].forEach(hourMap => {
+    for (const hourMap of hoursMaps[day]) {
         if (hourMap["open"] > time || hourMap["close"] < time)
-            is_in_bounds = false;
-    });
+            return false
+    }
 
-    return is_in_bounds; 
+    return true;
 }

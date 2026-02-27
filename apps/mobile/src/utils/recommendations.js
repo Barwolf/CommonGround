@@ -24,9 +24,7 @@ export const getRecommendations = (userProfile) => {
           const result = await recommendFunc({
             lat: latitude,
             lng: longitude,
-            radiusInM: 15000, 
-            userPrefSocial: userProfile.socialBattery,
-            userPrefPhys: userProfile.physicalEnergy,
+            radiusInM: 15000
           });
 
           console.log("✅ Success! Places received:", result.data.length);
