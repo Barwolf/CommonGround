@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, VectorValue, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import geofire from "geofire-common";
 
 const db = getFirestore();
@@ -28,7 +28,7 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     }
 
     const { lat, lng, radiusM = 10000 } = request.data;
-    const prefVector = VectorValue.vector([userProfile.socialBattery, userProfile.physicalEnergy]);
+    const prefVector = FieldValue.vector([userProfile.socialBattery, userProfile.physicalEnergy]);
 
     const userTags = new Set(userProfile.interests);
     const center = [lat, lng];
