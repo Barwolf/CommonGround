@@ -20,8 +20,8 @@ import { signOut } from 'firebase/auth';
 import { updateGlobalActivityCounts } from '../utils/updateAggregates';
 
 export default function Onboarding({ onComplete }) {  
-  const [socialBattery, setSocialBattery] = useState(5.0);
-  const [physicalEnergy, setPhysicalEnergy] = useState(5.0);
+  const [socialBattery, setSocialBattery] = useState(50);
+  const [physicalEnergy, setPhysicalEnergy] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [loading, setLoading] = useState(false);
 
