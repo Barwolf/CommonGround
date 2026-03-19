@@ -81,7 +81,9 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     const day = days[now.getDay()];
     const time = now.getHours() * 100 + now.getMinutes();
 
-    const TAG_BONUS = 2.0
+    const WEIGHT_VIBE = 1.0;      // Base multiplier for vibe mismatch
+    const WEIGHT_TAGS = 4.0;      // Heavily reward matching interests (subtracts from cost)
+    const WEIGHT_DISTANCE = 2.0;  // Adds X points of penalty per Kilometer of distance
 
     snapshots.forEach(snap => {
         snap.docs.forEach(doc => {
@@ -112,7 +114,7 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
                             Math.pow(data.physicality - userPhysicalEnergy, 2);
 
             // Adjust vector score based on tag matches
-            const vibeScore = initialVibeScore - (matches * TAG_BONUS);
+            const vibeScore = (initialVibeScore * WEIGHT_VIBE) + (distanceInKm * WEIGHT_DISTANCE) - (matches * WEIGHT_TAGS);
 
             results.push({
                 ...data,
