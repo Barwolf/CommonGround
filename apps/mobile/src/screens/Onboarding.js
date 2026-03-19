@@ -20,15 +20,17 @@ import { signOut } from 'firebase/auth';
 import { updateGlobalActivityCounts } from '../utils/updateAggregates';
 
 export default function Onboarding({ onComplete }) {  
-  const [socialBattery, setSocialBattery] = useState(50);
-  const [physicalEnergy, setPhysicalEnergy] = useState(50);
+  const [socialBattery, setSocialBattery] = useState(5.0);
+  const [physicalEnergy, setPhysicalEnergy] = useState(5.0);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const interests = [
-    'Hiking', 'Board Games', 'Live Music', 'Yoga', 'Coffee Chats',
-    'Rock Climbing', 'Book Clubs', 'Cooking', 'Art Galleries',
-    'Running', 'Meditation', 'Dancing'
+    'Cafes & Treats', 'Bars & Nightlife', 'Dining Out', 
+    'Nature & Parks', 'Active & Sports', 'Arts & Culture', 
+    'Live Entertainment', 'Games & Amusement', 'Wellness & Spa', 
+    'Sightseeing', 'Shopping & Retail', 'Hobbies & Learning', 
+    'Community Events'
   ];
 
   const toggleInterest = (interest) => {
@@ -54,8 +56,8 @@ export default function Onboarding({ onComplete }) {
       // We send the current values as the 'delta' because they started at 0
       await updateGlobalActivityCounts({
         activityChanges,
-        socialDelta: socialBattery,
-        physicalDelta: physicalEnergy,
+        socialDelta: socialBattery / 10.0,
+        physicalDelta: physicalEnergy / 10.0,
         userCountDelta: 1 
       });
 
@@ -63,8 +65,8 @@ export default function Onboarding({ onComplete }) {
       await setDoc(doc(db, "profiles", user.uid), {
         name: user.displayName,
         email: user.email,
-        socialBattery,
-        physicalEnergy,
+        socialBattery: socialBattery / 10.0,
+        physicalEnergy: physicalEnergy / 10.0,
         interests: selectedInterests,
         onboarded: true, // Marker for App.js routing
         updatedAt: serverTimestamp(),
