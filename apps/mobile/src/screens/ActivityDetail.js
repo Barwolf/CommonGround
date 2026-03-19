@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { ArrowLeft, UserCircle } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Linking } from 'react-native';
+import { ArrowLeft, CalendarPlus } from 'lucide-react-native';
 import Map from '../components/Map'; 
 
 const { width } = Dimensions.get('window');
 
 export default function ActivityDetail({ route, navigation }) {
   const { activity } = route.params;
-  const [isJoined, setIsJoined] = useState(false);
 
   const socialLevel = activity.sociability < 4 ? 'solo' : activity.sociability < 7 ? 'small-group' : 'group';
+
+  const handleAddToCalendar = async () => {
+    const title = encodeURIComponent(`Common Ground: ${activity.name}`);
+    const location = encodeURIComponent(activity.address);
+
+    const descriptionText = `Ready to touch grass?\n\nTags: ${activity.tags?.map(t => t.replace('_', ' ')).join(', ') || 'N/A'}\nVibe Match: ${Math.round(activity.vibeScore)}%\n\nView more in the Common Ground app!`;
+    const details = encodeURIComponent(descriptionText);
+
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&location=${location}&details=${details}`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        console.warn("Cannot open the calendar URL.");
+      }
+    } catch (error) {
+      console.error("An error occurred trying to open the calendar", error);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F3EE' }}>
@@ -51,13 +71,22 @@ export default function ActivityDetail({ route, navigation }) {
                </View>
             </View>
 
-            {/* MAP EMBED SECTION */}
             <View style={styles.mapContainer}>
               <Map activity={activity} />
             </View>
           </View>
         </View>
       </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity 
+          style={styles.calendarButton} 
+          onPress={handleAddToCalendar}
+        >
+          <CalendarPlus size={20} color="#FFF" />
+          <Text style={styles.calendarButtonText}>Add to Calendar</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -80,8 +109,20 @@ const styles = StyleSheet.create({
   labelText: { color: '#8B7355', fontSize: 12, marginBottom: 4 },
   valueText: { color: '#4A5D47', fontWeight: '600' },
   mapContainer: { height: 200, width: '100%', marginVertical: 20, borderRadius: 15, overflow: 'hidden' },
-  organizerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#EEE' },
-  organizerName: { fontWeight: '600', color: '#4A5D47' },
+  
   footer: { position: 'absolute', bottom: 0, width: '100%', padding: 20, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#EEE' },
-  joinButton: { backgroundColor: '#7A9B76', paddingVertical: 16, borderRadius: 16, alignItems: 'center' }
+  calendarButton: { 
+    backgroundColor: '#7A9B76', 
+    paddingVertical: 16, 
+    borderRadius: 16, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10
+  },
+  calendarButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16
+  }
 });
