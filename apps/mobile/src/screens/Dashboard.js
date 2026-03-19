@@ -17,8 +17,8 @@ export default function Dashboard({ profile }) {
 
   const loadPlaces = async () => {
     try {
-      // const data = await getRecommendations(profile);
-      const data = dummyData; // Using dummy data for testing
+      const data = await getRecommendations(profile);
+      //const data = dummyData; // Using dummy data for testing
       setPlaces(data);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }
