@@ -15,8 +15,11 @@ export const getRecommendations = (userProfile) => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         console.log("📍 Location found:", position.coords.latitude, position.coords.longitude);
-        const { latitude, longitude } = position.coords;
-
+        // const { latitude, longitude } = position.coords;
+        // 33.64794862863894, -117.82891618133397
+        // Using a hardcoded location for testing purposes
+        const latitude = 33.64794862863894;
+        const longitude = -117.82891618133397;
         try {
           const functions = getFunctions(app);
           const recommendFunc = httpsCallable(functions, 'getPersonalizedRecommendations');

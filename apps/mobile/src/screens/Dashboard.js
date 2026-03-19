@@ -4,6 +4,7 @@ import { Leaf, LogOut } from 'lucide-react-native';
 import { getAuth, signOut } from 'firebase/auth';
 import { getRecommendations } from '../utils/recommendations';
 import ActivityCard from '../components/ActivityCard';
+import dummyData from '../../dummyData.json';
 
 export default function Dashboard({ profile }) {
   const [places, setPlaces] = useState([]);
@@ -13,9 +14,11 @@ export default function Dashboard({ profile }) {
 
   useEffect(() => { if (profile) loadPlaces(); }, [profile]);
 
+
   const loadPlaces = async () => {
     try {
-      const data = await getRecommendations(profile);
+      // const data = await getRecommendations(profile);
+      const data = dummyData; // Using dummy data for testing
       setPlaces(data);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }

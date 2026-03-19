@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Leaf, LogIn } from 'lucide-react-native'; // Added LogIn icon for style
+import { Leaf, LogIn, Shield } from 'lucide-react-native'; 
 import { auth } from '../../firebaseConfig';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { useFocusEffect } from '@react-navigation/native'; // NEW IMPORT
 
-export default function AuthScreen() {
+export let globalAuthError = null;
+export const setGlobalAuthError = (msg) => { globalAuthError = msg; };
+
+export default function AuthScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (globalAuthError) {
+        setErrorMessage(globalAuthError);
+        setGlobalAuthError(null);
+      }
+    }, [])
+  );
 
   const handleGoogleAuth = async () => {
     setLoading(true);
+    setErrorMessage(null);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // Auth state change is handled in App.js
     } catch (error) {
       console.error("Google Auth Error:", error);
       setLoading(false);
@@ -46,6 +60,17 @@ export default function AuthScreen() {
         <Text style={styles.footerText}>
           By continuing, you agree to touch grass.
         </Text>
+      </View>
+
+      {/* Floating Admin Section */}
+      <View style={styles.adminContainer}>
+        <TouchableOpacity 
+          style={styles.adminButton}
+          onPress={() => navigation.navigate('AdminAuth')}
+          activeOpacity={0.8}
+        >
+          <Shield color="#8B7355" size={24} />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -82,10 +107,10 @@ const styles = StyleSheet.create({
   },
   primaryButton: { 
     width: '100%', 
-    backgroundColor: '#4A5D47', // Deep green signature color
+    backgroundColor: '#4A5D47', 
     flexDirection: 'row',
     padding: 18, 
-    borderRadius: 20, // Matching onboarding style
+    borderRadius: 20, 
     alignItems: 'center', 
     justifyContent: 'center',
     gap: 12,
@@ -105,5 +130,35 @@ const styles = StyleSheet.create({
     fontSize: 12, 
     textAlign: 'center',
     marginTop: 20
+  },
+  // Container to hold the text and button together
+  adminContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  adminWarningText: {
+    color: '#FF4444', // Red warning color
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  adminButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E8F0E7', 
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   }
 });
