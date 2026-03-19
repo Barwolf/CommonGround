@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { ArrowLeft, MapPin, Clock, Users, User, Zap, Wind, Flame, UserCircle } from 'lucide-react-native';
+import { ArrowLeft, UserCircle } from 'lucide-react-native';
+import Map from '../components/Map'; 
 
 const { width } = Dimensions.get('window');
 
@@ -8,12 +9,11 @@ export default function ActivityDetail({ route, navigation }) {
   const { activity } = route.params;
   const [isJoined, setIsJoined] = useState(false);
 
-  const physicalLevel = activity.physicality < 4 ? 'low' : activity.physicality < 8 ? 'moderate' : 'high';
   const socialLevel = activity.sociability < 4 ? 'solo' : activity.sociability < 7 ? 'small-group' : 'group';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F3EE' }}>
-      <ScrollView bounces={false}>
+      <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: `https://picsum.photos/seed/${activity.geohash}/600/400` }} style={styles.headerImage} />
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -24,9 +24,12 @@ export default function ActivityDetail({ route, navigation }) {
         <View style={styles.contentWrapper}>
           <View style={styles.mainCard}>
             <Text style={styles.title}>{activity.name}</Text>
+            
             <View style={styles.tagRow}>
               {activity.tags.map((tag, i) => (
-                <View key={i} style={styles.tag}><Text style={styles.tagText}>{tag.replace('_', ' ')}</Text></View>
+                <View key={i} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag.replace('_', ' ')}</Text>
+                </View>
               ))}
             </View>
 
@@ -48,24 +51,13 @@ export default function ActivityDetail({ route, navigation }) {
                </View>
             </View>
 
-            <View style={styles.organizerRow}>
-              <UserCircle size={24} color="#7A9B76" />
-              <View><Text style={styles.organizerName}>Verified Destination</Text></View>
+            {/* MAP EMBED SECTION */}
+            <View style={styles.mapContainer}>
+              <Map activity={activity} />
             </View>
           </View>
         </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.joinButton, isJoined && { backgroundColor: '#E8F0E7' }]}
-          onPress={() => setIsJoined(!isJoined)}
-        >
-          <Text style={{ color: isJoined ? '#7A9B76' : 'white', fontWeight: '700' }}>
-            {isJoined ? 'Joined ✓' : 'Join Activity'}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -73,22 +65,23 @@ export default function ActivityDetail({ route, navigation }) {
 const styles = StyleSheet.create({
   imageContainer: { width, height: 280 },
   headerImage: { width: '100%', height: '100%' },
-  backButton: { position: 'absolute', top: 50, left: 20, backgroundColor: 'white', padding: 10, borderRadius: 25 },
+  backButton: { position: 'absolute', top: 50, left: 20, backgroundColor: 'white', padding: 10, borderRadius: 25, zIndex: 10 },
   contentWrapper: { paddingHorizontal: 20, marginTop: -30 },
-  mainCard: { backgroundColor: 'white', borderRadius: 30, padding: 25, elevation: 5 },
+  mainCard: { backgroundColor: 'white', borderRadius: 30, padding: 25, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
   title: { fontSize: 24, fontWeight: '700', color: '#4A5D47', marginBottom: 10 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   tag: { backgroundColor: '#E8F0E7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  tagText: { color: '#7A9B76', fontSize: 12 },
+  tagText: { color: '#7A9B76', fontSize: 12, fontWeight: '600' },
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#4A5D47', marginBottom: 5 },
   description: { color: '#6B7F68', lineHeight: 20 },
-  grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   gridItem: { width: '48%' },
   labelText: { color: '#8B7355', fontSize: 12, marginBottom: 4 },
   valueText: { color: '#4A5D47', fontWeight: '600' },
+  mapContainer: { height: 200, width: '100%', marginVertical: 20, borderRadius: 15, overflow: 'hidden' },
   organizerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#EEE' },
   organizerName: { fontWeight: '600', color: '#4A5D47' },
-  footer: { padding: 20, backgroundColor: 'white' },
+  footer: { position: 'absolute', bottom: 0, width: '100%', padding: 20, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#EEE' },
   joinButton: { backgroundColor: '#7A9B76', paddingVertical: 16, borderRadius: 16, alignItems: 'center' }
 });
