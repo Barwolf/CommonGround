@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "locations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "geohash",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "vibe_vector",
+          "vectorConfig": {
+            "dimension": 2,
+            "flat": {} 
+          }
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
