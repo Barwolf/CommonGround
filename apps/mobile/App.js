@@ -10,6 +10,8 @@ import AuthScreen from './src/screens/AuthScreen';
 import Onboarding from './src/screens/Onboarding';
 import Dashboard from './src/screens/Dashboard';
 import ActivityDetail from './src/screens/ActivityDetail'; 
+import AdminDashboard from './src/screens/AdminDashboard';
+import AdminAuthScreen, { adminAuthTracker } from './src/screens/AdminAuthScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,24 +20,27 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid) => {
-    const docRef = doc(db, "profiles", uid);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      setProfile(docSnap.data());
-    } else {
-      setProfile(null);
-    }
-  };
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
+        const docRef = doc(db, "profiles", authUser.uid);
+        const docSnap = await getDoc(docRef);
+        const profileData = docSnap.exists() ? docSnap.data() : null;
+
+        if (adminAuthTracker.isChecking && !profileData?.isAdmin) {
+          return; 
+        }
+
+        if (adminAuthTracker.isChecking) {
+          adminAuthTracker.isChecking = false;
+        }
+
+        setProfile(profileData);
         setUser(authUser);
-        await fetchProfile(authUser.uid);
       } else {
         setUser(null);
         setProfile(null);
+        adminAuthTracker.isChecking = false;
       }
       setLoading(false);
     });
@@ -44,21 +49,27 @@ export default function App() {
 
   if (loading) return null;
 
-  // --- NAVIGATION FLOWS ---
+  const isAdmin = !!profile?.isAdmin;
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          // 1. Auth Flow
-          <Stack.Screen name="Auth" component={AuthScreen} />
+          <>
+            <Stack.Screen name="Auth" component={AuthScreen} />
+            <Stack.Screen name="AdminAuth" component={AdminAuthScreen} />
+          </>
         ) : !profile ? (
-          // 2. Onboarding Flow
           <Stack.Screen name="Onboarding">
-            {(props) => <Onboarding {...props} onComplete={() => fetchProfile(user.uid)} />}
+            {(props) => <Onboarding {...props} onComplete={async () => {
+               const docRef = doc(db, "profiles", user.uid);
+               const docSnap = await getDoc(docRef);
+               setProfile(docSnap.data());
+            }} />}
           </Stack.Screen>
+        ) : isAdmin ? (
+          <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
         ) : (
-          // 3. Main App Flow
           <>
             <Stack.Screen name="Home">
               {(props) => <Dashboard {...props} profile={profile} />}
@@ -66,7 +77,7 @@ export default function App() {
             <Stack.Screen 
               name="Details" 
               component={ActivityDetail} 
-              options={{ animation: 'slide_from_bottom' }} // Optional: cool transition
+              options={{ animation: 'slide_from_bottom' }} 
             />
           </>
         )}
