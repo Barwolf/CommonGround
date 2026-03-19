@@ -53,7 +53,6 @@ export default function AdminDashboard({ navigation }) {
 
   const handleSignOut = async () => {
     await signOut(auth);
-    navigation.replace('AdminAuth');
   };
 
   if (loading) return <ActivityIndicator color="#8B7355" style={{ flex: 1, backgroundColor: '#F5F3EE' }} />;

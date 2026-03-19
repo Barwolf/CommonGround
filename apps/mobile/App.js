@@ -19,6 +19,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdminSession, setIsAdminSession] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
@@ -31,6 +32,8 @@ export default function App() {
           return; 
         }
 
+        setIsAdminSession(adminAuthTracker.isChecking);
+
         if (adminAuthTracker.isChecking) {
           adminAuthTracker.isChecking = false;
         }
@@ -40,6 +43,7 @@ export default function App() {
       } else {
         setUser(null);
         setProfile(null);
+        setIsAdminSession(false); 
         adminAuthTracker.isChecking = false;
       }
       setLoading(false);
@@ -49,7 +53,7 @@ export default function App() {
 
   if (loading) return null;
 
-  const isAdmin = !!profile?.isAdmin;
+  const showAdminDashboard = !!profile?.isAdmin && isAdminSession;
 
   return (
     <NavigationContainer>
@@ -59,7 +63,9 @@ export default function App() {
             <Stack.Screen name="Auth" component={AuthScreen} />
             <Stack.Screen name="AdminAuth" component={AdminAuthScreen} />
           </>
-        ) : !profile ? (
+        ) : showAdminDashboard ? (
+          <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+        ) : !profile?.onboarded ? (
           <Stack.Screen name="Onboarding">
             {(props) => <Onboarding {...props} onComplete={async () => {
                const docRef = doc(db, "profiles", user.uid);
@@ -67,8 +73,6 @@ export default function App() {
                setProfile(docSnap.data());
             }} />}
           </Stack.Screen>
-        ) : isAdmin ? (
-          <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
         ) : (
           <>
             <Stack.Screen name="Home">
