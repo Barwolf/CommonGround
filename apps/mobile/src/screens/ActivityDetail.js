@@ -35,7 +35,7 @@ export default function ActivityDetail({ route, navigation }) {
     <View style={{ flex: 1, backgroundColor: '#F5F3EE' }}>
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: `https://picsum.photos/seed/${activity.geohash}/600/400` }} style={styles.headerImage} />
+          <Image source={{ uri: `https://picsum.photos/seed/${activity.geohash}/600/400` }} style={styles.headerImage} resizeMethod='cover'/>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <ArrowLeft size={20} color="#4A5D47" />
           </TouchableOpacity>
