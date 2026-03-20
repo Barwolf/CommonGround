@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { ArrowLeft, CalendarPlus } from 'lucide-react-native';
 import Map from '../components/Map'; 
-import { getDisplayCategories } from '../utils/recommendations';
+import { getDisplayCategories, getCategoryImage } from '../utils/recommendations';
 
 export default function ActivityDetail({ route, navigation }) {
   const { activity } = route.params;
@@ -10,6 +10,7 @@ export default function ActivityDetail({ route, navigation }) {
   // Use backend score directly (0-100)
   const displayScore = Math.round(activity.vibeScore || 0);
   const categories = getDisplayCategories(activity.tags);
+  const categoryImage = getCategoryImage(activity.tags);
 
   const handleAddToCalendar = async () => {
     const title = encodeURIComponent(`Common Ground: ${activity.name}`);
@@ -24,7 +25,7 @@ export default function ActivityDetail({ route, navigation }) {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.imageContainer}>
           <Image 
-            source={{ uri: `https://picsum.photos/seed/${activity.geohash}/1600/900` }} 
+            source={{ uri: categoryImage }} 
             style={styles.headerImage} 
             resizeMode="cover" 
           />

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { MapPin, Users, User, Zap, Flame } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getDisplayCategories } from '../utils/recommendations';
+import { getDisplayCategories, getCategoryImage } from '../utils/recommendations';
 
 const ActivityCard = (props) => {
   const navigation = useNavigation();
@@ -12,6 +12,7 @@ const ActivityCard = (props) => {
   const displayScore = Math.round(vibeScore || 0);
   
   const categories = getDisplayCategories(tags);
+  const categoryImage = getCategoryImage(tags);
   const primaryCategory = categories[0] || "Destination";
   const distanceMiles = (distanceInM / 1609).toFixed(1);
 
@@ -22,7 +23,7 @@ const ActivityCard = (props) => {
       style={styles.card}
     >
       <Image 
-        source={{ uri: `https://picsum.photos/seed/${geohash}/800/400` }} 
+        source={{ uri: categoryImage }}
         style={styles.cardImage} 
         resizeMode="cover" 
       />
