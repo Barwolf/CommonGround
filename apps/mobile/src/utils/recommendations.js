@@ -33,24 +33,6 @@ export const getDisplayCategories = (rawTags) => {
   return Array.from(categories);
 };
 
-export const calculateVibeMatch = (profile, activity) => {
-  // Fallback values if profile isn't loaded yet
-  const userPhys = profile?.preferredPhysicality || 5;
-  const userSoc = profile?.preferredSociability || 5;
-
-  // Calculate the difference (0 is a perfect match, 9 is the worst possible match)
-  const physDiff = Math.abs(userPhys - activity.physicality);
-  const socDiff = Math.abs(userSoc - activity.sociability);
-
-  // Total difference (max possible is 18)
-  const totalDiff = physDiff + socDiff;
-  
-  // Convert to a percentage (100% is perfect, 0% is totally opposite)
-  const matchPercentage = Math.max(0, 100 - (totalDiff * 5.5)); 
-  
-  return Math.round(matchPercentage);
-};
-
 export const getRecommendations = (userProfile) => {
   console.log("🏃 Utility started with profile:", userProfile);
 
