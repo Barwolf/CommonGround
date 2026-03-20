@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 
 export default function Map({ activity }) {
   // We use the latitude and longitude from your dummy data
-  const mapUrl = `https://maps.google.com/maps?q=${activity.latitude},${activity.longitude}&z=15&output=embed`;
+  const mapUrl = `https://maps.google.com/maps?q=${activity.lat},${activity.lng}&z=15&output=embed`;
 
   return (
     <View style={styles.container}>
