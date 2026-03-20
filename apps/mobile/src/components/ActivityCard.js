@@ -6,8 +6,8 @@ import { getDisplayCategories, getCategoryImage } from '../utils/recommendations
 
 const ActivityCard = (props) => {
   const navigation = useNavigation();
-  const { name, geohash, distanceInM, physicality, sociability, tags, vibeScore } = props;
-
+  
+  const { name, geohash, distanceInM, physicality, sociability, tags, vibeScore, profile } = props;
   // No math needed—just clean up the decimal if it has one
   const displayScore = Math.round(vibeScore || 0);
   
@@ -19,7 +19,11 @@ const ActivityCard = (props) => {
   return (
     <TouchableOpacity 
       activeOpacity={0.9}
-      onPress={() => navigation.navigate('Details', { activity: props })}
+      onPress={() => navigation.navigate('Details', { 
+        activity: props, 
+        profile,
+        passedImage: categoryImage // <--- Sending the specific image
+      })}
       style={styles.card}
     >
       <Image 

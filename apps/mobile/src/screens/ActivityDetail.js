@@ -5,7 +5,7 @@ import Map from '../components/Map';
 import { getDisplayCategories, getCategoryImage } from '../utils/recommendations';
 
 export default function ActivityDetail({ route, navigation }) {
-  const { activity } = route.params;
+  const { activity, passedImage } = route.params;
 
   // Use backend score directly (0-100)
   const displayScore = Math.round(activity.vibeScore || 0);
@@ -25,7 +25,7 @@ export default function ActivityDetail({ route, navigation }) {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.imageContainer}>
           <Image 
-            source={{ uri: categoryImage }} 
+            source={{ uri: passedImage }}
             style={styles.headerImage} 
             resizeMode="cover" 
           />
