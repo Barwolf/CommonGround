@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Linking } from 'react-native';
 import { ArrowLeft, CalendarPlus } from 'lucide-react-native';
 import Map from '../components/Map'; 
-// Import everything from your unified utils file
 import { getDisplayCategories, calculateVibeMatch } from '../utils/recommendations';
 
 const { width } = Dimensions.get('window');
@@ -10,18 +9,14 @@ const { width } = Dimensions.get('window');
 export default function ActivityDetail({ route, navigation }) {
   const { activity, profile } = route.params;
 
-  // Use the centralized utility functions
   const categories = getDisplayCategories(activity.tags);
   const vibeMatch = calculateVibeMatch(profile, activity);
-  
-  // Quick logic for social labels
-  const socialLevel = activity.sociability < 4 ? 'solo' : activity.sociability < 7 ? 'small-group' : 'group';
 
   const handleAddToCalendar = async () => {
     const title = encodeURIComponent(`Common Ground: ${activity.name}`);
     const location = encodeURIComponent(activity.address);
     const details = encodeURIComponent(
-      `Ready to touch grass?\n\nVibe Match: ${vibeMatch}%\nAddress: ${activity.address}\n\nCategories: ${categories.join(', ')}`
+      `Ready to touch grass?\n\nVibe Match: ${vibeMatch}%\nAddress: ${activity.address}`
     );
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&location=${location}&details=${details}`;
     
@@ -72,14 +67,15 @@ export default function ActivityDetail({ route, navigation }) {
               </View>
             </View>
 
+            {/* INFO GRID */}
             <View style={styles.grid}>
                <View style={styles.gridItem}>
                  <Text style={styles.labelText}>📍 Location</Text>
-                 <Text style={styles.valueText} numberOfLines={1}>{activity.address.split(',')[0]}</Text>
+                 <Text style={styles.valueText}>{activity.address}</Text>
                </View>
                <View style={styles.gridItem}>
                  <Text style={styles.labelText}>⚡ Social</Text>
-                 <Text style={styles.valueText}>{socialLevel}</Text>
+                 <Text style={styles.valueText}>{activity.sociability}/10</Text>
                </View>
             </View>
             
@@ -131,9 +127,9 @@ const styles = StyleSheet.create({
   vibeBarBackground: { height: 10, backgroundColor: '#F0EBE4', borderRadius: 5, overflow: 'hidden' },
   vibeBarFill: { height: '100%', backgroundColor: '#7A9B76', borderRadius: 5 },
   grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  gridItem: { width: '48%' },
+  gridItem: { width: '48%' }, // Maintains the two-column look
   labelText: { color: '#8B7355', fontSize: 12, marginBottom: 4, fontWeight: '600', textTransform: 'uppercase' },
-  valueText: { color: '#4A5D47', fontWeight: '700', fontSize: 15 },
+  valueText: { color: '#4A5D47', fontWeight: '700', fontSize: 15, lineHeight: 20 }, // Added lineHeight for multi-line addresses
   mapContainer: { height: 220, width: '100%', marginTop: 10, borderRadius: 20, overflow: 'hidden', backgroundColor: '#F5F3EE' },
   footer: { position: 'absolute', bottom: 0, width: '100%', padding: 25, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#EEE' },
   calendarButton: { backgroundColor: '#7A9B76', paddingVertical: 18, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
