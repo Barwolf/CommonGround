@@ -81,9 +81,15 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
     const day = days[now.getDay()];
     const time = now.getHours() * 100 + now.getMinutes();
 
-    const WEIGHT_VIBE = 1.0;      // Base multiplier for vibe mismatch
-    const WEIGHT_TAGS = 4.0;      // Heavily reward matching interests (subtracts from cost)
-    const WEIGHT_DISTANCE = 2.0;  // Adds X points of penalty per Kilometer of distance
+    const WEIGHT_VIBE = 0.80;      // Vibe match multiplier
+    const WEIGHT_TAGS = 0.15;      // Rewards matching interests
+    const WEIGHT_DISTANCE = 0.05;  // Distance Multiplier
+
+    const MAX_TAG_MATCHES = 3;
+    const MAX_SCALE = 10;
+    const MAX_VIBE_DIST = Math.pow(MAX_SCALE - 1, 2) + 
+                        Math.pow(MAX_SCALE - 1, 2);
+    const MAX_KM = radiusM / 1000;
 
     snapshots.forEach(snap => {
         snap.docs.forEach(doc => {
@@ -104,27 +110,45 @@ export const getPersonalizedRecommendations = onCall({minInstances: 1}, async (r
 
             if (distanceInM > radiusM) return;
 
+            const distanceMatchPercent = 100 - ((distanceInKm / MAX_KM) * 100)
+
             // SCORING: Count how many of the place's tags are in our acceptable set
             let matches = 0;
             if (data.tags && Array.isArray(data.tags)) {
                 matches = data.tags.filter(tag => acceptableRawTags.has(tag)).length;
             }
 
-            const initialVibeScore = Math.pow(data.sociability - userSocialBattery, 2) + 
+            const tagMatchPercent = Math.min(100, (matches / MAX_TAG_MATCHES) * 100)
+
+            const vibeDistance = Math.pow(data.sociability - userSocialBattery, 2) + 
                             Math.pow(data.physicality - userPhysicalEnergy, 2);
+            const vibeMatchPercent = 100 - ((vibeDistance / MAX_VIBE_DIST) * 100)
 
             // Adjust vector score based on tag matches
-            const vibeScore = (initialVibeScore * WEIGHT_VIBE) + (distanceInKm * WEIGHT_DISTANCE) - (matches * WEIGHT_TAGS);
+            const vibeScore = (vibeMatchPercent * WEIGHT_VIBE) + (distanceMatchPercent * WEIGHT_DISTANCE) + (tagMatchPercent * WEIGHT_TAGS);
 
             results.push({
                 ...data,
+                "tag_matches": matches,
                 "vibeScore": vibeScore, 
                 "distanceInM": distanceInM
             });
         });
     });
 
-    return results.sort((a, b) => a.vibeScore - b.vibeScore).slice(0, 20);
+    return results.sort((a, b) => {
+        const score_diff = b.vibeScore - a.vibeScore;
+        
+        if (score_diff === 0) {
+            if (b.matches - a.matches === 0) {
+                return b.distanceInM - a.distanceInM;
+            }
+
+            return b.matches - a.matches;
+        }
+
+        return score_diff;
+    }).slice(0, 20);
 });
 
 function isPlaceOpen(hoursMap, day, time) {
