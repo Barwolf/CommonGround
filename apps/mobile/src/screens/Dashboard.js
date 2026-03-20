@@ -12,16 +12,23 @@ export default function Dashboard({ profile }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const auth = getAuth();
 
-  useEffect(() => { if (profile) loadPlaces(); }, [profile]);
-
+  useEffect(() => { 
+    if (profile) loadPlaces(); 
+  }, [profile]);
 
   const loadPlaces = async () => {
+    setLoading(true); // Ensure spinner shows during refresh
     try {
+      // TOGGLE THIS: Switch between dummyData and real API
       const data = await getRecommendations(profile);
-      //const data = dummyData; // Using dummy data for testing
+      // const data = dummyData; 
+      
       setPlaces(data);
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+    } catch (err) { 
+      console.error("Dashboard Load Error:", err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   if (loading) return <ActivityIndicator color="#7A9B76" style={{ flex: 1 }} />;
@@ -34,12 +41,19 @@ export default function Dashboard({ profile }) {
           <Text style={styles.headerBrand}>Common Ground</Text>
         </View>
         <TouchableOpacity style={styles.profileCircle} onPress={() => setMenuVisible(true)}>
-          <Text style={styles.profileInitials}>{profile?.email?.substring(0, 2).toUpperCase()}</Text>
+          <Text style={styles.profileInitials}>
+            {profile?.email?.substring(0, 2).toUpperCase() || '??'}
+          </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Profile Menu Modal */}
       <Modal visible={menuVisible} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setMenuVisible(false)}
+        >
           <View style={styles.dropdown}>
             <TouchableOpacity style={styles.logoutButton} onPress={() => signOut(auth)}>
               <LogOut size={18} color="#FF4444" />
@@ -52,8 +66,14 @@ export default function Dashboard({ profile }) {
       <FlatList
         data={places}
         keyExtractor={(item) => item.geohash}
-        renderItem={({ item }) => <ActivityCard {...item} />}
+        // PASS PROFILE HERE so the card can calculate the Vibe Match
+        renderItem={({ item }) => (
+          <ActivityCard {...item} profile={profile} />
+        )}
         contentContainerStyle={{ padding: 20 }}
+        // Optional: Add a refresh control if you want to pull-to-refresh
+        onRefresh={loadPlaces}
+        refreshing={loading}
       />
     </SafeAreaView>
   );
